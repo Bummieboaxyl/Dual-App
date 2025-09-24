@@ -1,0 +1,7 @@
+# group_vars/all.yml
+
+db_host: localhost
+db_name: sharedappdb
+db_user: devops
+db_pass: Secretpassword123
+db_port: 5432

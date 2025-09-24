@@ -1,6 +1,6 @@
 ---
 - name: Deploy Flask + Node.js apps with PostgreSQL
-  hosts: app
+  hosts: target
   become: yes
   roles:
     - postgres

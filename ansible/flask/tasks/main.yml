@@ -1,5 +1,7 @@
 ---
 # tasks file for flask
+---
+
 - name: Install Python3 and pip
   yum:
     name:
@@ -18,16 +20,16 @@
   file:
     path: /opt/flask-app
     state: directory
-    owner: centos
-    group: centos
+    owner: ec2-user
+    group: ec2-user
     mode: 0755
 
 - name: Copy Flask source code
   copy:
     src: ../../flask-app/
     dest: /opt/flask-app/
-    owner: centos
-    group: centos
+    owner: ec2-user
+    group: ec2-user
 
 - name: Create systemd service for Flask
   copy:
@@ -38,17 +40,16 @@
       After=network.target
 
       [Service]
-      User=centos
+      User=ec2-user
       WorkingDirectory=/opt/flask-app
+      Environment=DB_HOST={{ db_host }}
+      Environment=DB_NAME={{ db_name }}
+      Environment=DB_USER={{ db_user }}
+      Environment=DB_PASS={{ db_pass }}
+      Environment=DB_PORT={{ db_port }}
       ExecStart=/usr/bin/python3 /opt/flask-app/app.py
       Restart=always
 
       [Install]
       WantedBy=multi-user.target
-
-- name: Start and enable Flask service
-  systemd:
-    name: flask-app
-    state: started
-    enabled: yes
-
+  notify: Restart Flask
