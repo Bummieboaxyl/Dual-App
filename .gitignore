@@ -21,7 +21,7 @@ dist/
 build/
 
 # Ansible sensitive stuff
-group_vars/all.yml
+group_vars/
 *.retry
 *.pem
 

@@ -31,6 +31,13 @@
     password: "{{ db_password }}"
     role_attr_flags: LOGIN
 
+- name: Ensure devops user has correct password
+  community.postgresql.postgresql_user:
+    name: "{{ db_user }}"
+    password: "{{ db_password }}"
+    role_attr_flags: LOGIN
+    state: present
+
 - name: Copy schema file to server
   copy:
     src: db/init.sql
