@@ -1,7 +1,5 @@
 ---
 # tasks file for flask
----
-
 - name: Install Python3 and pip
   yum:
     name:
