@@ -26,13 +26,10 @@
     state: present
 
 - name: Ensure devops user exists
-  become_user: postgres
   community.postgresql.postgresql_user:
     name: devops
-    password: password
-    db: sharedappdb
-    priv: "ALL"
-    state: present
+    password: "{{ db_password }}"
+    role_attr_flags: LOGIN
 
 - name: Copy schema file to server
   copy:
