@@ -1,2 +1,35 @@
 ---
 # tasks file for postgres
+- name: Install PostgreSQL
+  yum:
+    name: postgresql-server
+    state: present
+
+- name: Install PostgreSQL contrib
+  yum:
+    name: postgresql-contrib
+    state: present
+
+- name: Initialize PostgreSQL database
+  command: postgresql-setup initdb
+  args:
+    creates: /var/lib/pgsql/data/postgresql.conf
+
+- name: Ensure PostgreSQL is running
+  systemd:
+    name: postgresql
+    state: started
+    enabled: yes
+
+- name: Copy schema init.sql
+  copy:
+    src: ../../db/init.sql
+    dest: /tmp/init.sql
+    owner: postgres
+    group: postgres
+    mode: 0644
+
+- name: Run init.sql to set up schema
+  become_user: postgres
+  command: psql -f /tmp/init.sql
+

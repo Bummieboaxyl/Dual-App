@@ -1,2 +1,54 @@
 ---
 # tasks file for flask
+- name: Install Python3 and pip
+  yum:
+    name:
+      - python3
+      - python3-pip
+    state: present
+
+- name: Install Flask + psycopg2
+  pip:
+    name:
+      - flask
+      - psycopg2-binary
+    executable: pip3
+
+- name: Create flask app directory
+  file:
+    path: /opt/flask-app
+    state: directory
+    owner: centos
+    group: centos
+    mode: 0755
+
+- name: Copy Flask source code
+  copy:
+    src: ../../flask-app/
+    dest: /opt/flask-app/
+    owner: centos
+    group: centos
+
+- name: Create systemd service for Flask
+  copy:
+    dest: /etc/systemd/system/flask-app.service
+    content: |
+      [Unit]
+      Description=Flask Application
+      After=network.target
+
+      [Service]
+      User=centos
+      WorkingDirectory=/opt/flask-app
+      ExecStart=/usr/bin/python3 /opt/flask-app/app.py
+      Restart=always
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Start and enable Flask service
+  systemd:
+    name: flask-app
+    state: started
+    enabled: yes
+

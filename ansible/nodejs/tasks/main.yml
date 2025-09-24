@@ -1,2 +1,46 @@
 ---
 # tasks file for nodejs
+- name: Add Node.js repo
+  get_url:
+    url: https://rpm.nodesource.com/setup_16.x
+    dest: /tmp/nodesource_setup.sh
+    mode: 0755
+
+- name: Run Node.js setup
+  command: bash /tmp/nodesource_setup.sh
+
+- name: Install Node.js and npm
+  yum:
+    name: nodejs
+    state: present
+
+- name: Install PM2 globally
+  npm:
+    name: pm2
+    global: yes
+
+- name: Create node app directory
+  file:
+    path: /opt/node-app
+    state: directory
+    owner: centos
+    group: centos
+    mode: 0755
+
+- name: Copy Node.js source code
+  copy:
+    src: ../../node-app/
+    dest: /opt/node-app/
+    owner: centos
+    group: centos
+
+- name: Start Node app with PM2
+  command: pm2 start /opt/node-app/index.js --name node-app -- --port 3000
+  args:
+    chdir: /opt/node-app
+
+- name: Save PM2 process list
+  command: pm2 save
+
+- name: Enable PM2 startup
+  command: pm2 startup systemd -u centos --hp /home/centos
