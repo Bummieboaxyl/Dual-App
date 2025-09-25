@@ -7,10 +7,6 @@
       - python3-pip
     state: present
 
-- name: Install Python dependencies
-  pip:
-    requirements: /home/ec2-user/flask-app/requirements.txt
-
 - name: Copy Flask app
   copy:
     src: ../../flask-app/
@@ -18,6 +14,10 @@
     owner: ec2-user
     group: ec2-user
     mode: 0755
+
+- name: Install Python dependencies
+  pip:
+    requirements: /home/ec2-user/flask-app/requirements.txt
 
 - name: Deploy Flask systemd service (inline)
   copy:
