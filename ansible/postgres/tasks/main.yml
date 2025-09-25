@@ -10,46 +10,39 @@
       - python3-psycopg2
     state: present
 
-- name: Initialize PostgreSQL database
+- name: Initialize PostgreSQL database if not already
   command: /usr/bin/postgresql-setup initdb
   args:
     creates: /var/lib/pgsql/data/PG_VERSION
 
-- name: Ensure PostgreSQL service is running
+- name: Deploy pg_hba.conf with md5 auth
+  template:
+    src: pg_hba.conf.j2
+    dest: /var/lib/pgsql/data/pg_hba.conf
+    owner: postgres
+    group: postgres
+    mode: 0600
+  notify: Restart PostgreSQL
+
+- name: Ensure PostgreSQL is running
   service:
     name: postgresql
     state: started
     enabled: yes
 
-- name: Ensure devops user exists
+- name: Ensure DB user exists
   become_user: postgres
   postgresql_user:
     name: "{{ db_user }}"
     password: "{{ db_password }}"
     state: present
 
-- name: Ensure sharedappdb database exists
+- name: Ensure database exists
   become_user: postgres
   postgresql_db:
     name: "{{ db_name }}"
     owner: "{{ db_user }}"
     state: present
-
-- name: Allow password authentication for IPv4
-  lineinfile:
-    path: /var/lib/pgsql/data/pg_hba.conf
-    regexp: '^(host\s+all\s+all\s+127\.0\.0\.1/32\s+)\w+'
-    line: 'host    all             all             127.0.0.1/32            md5'
-    state: present
-  notify: Restart PostgreSQL
-
-- name: Allow password authentication for IPv6
-  lineinfile:
-    path: /var/lib/pgsql/data/pg_hba.conf
-    regexp: '^(host\s+all\s+all\s+::1/128\s+)\w+'
-    line: 'host    all             all             ::1/128                 md5'
-    state: present
-  notify: Restart PostgreSQL
 
 - name: Ensure devs table exists
   become_user: postgres
@@ -60,6 +53,12 @@
         id SERIAL PRIMARY KEY,
         name VARCHAR(50) UNIQUE
       );
+
+- name: Grant privileges to app user
+  become_user: postgres
+  postgresql_query:
+    db: "{{ db_name }}"
+    query: "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {{ db_user }};"
 
 - name: Seed devs table with sample data
   become_user: postgres
@@ -72,29 +71,3 @@
         ('Node Developer'),
         ('Shared DB User')
       ON CONFLICT (name) DO NOTHING;
-
-- name: Grant privileges to devops user on schema
-  become_user: postgres
-  postgresql_privs:
-    db: "{{ db_name }}"
-    roles: "{{ db_user }}"
-    objs: public
-    type: schema
-    privs: USAGE
-
-- name: Grant privileges on all tables to devops user
-  become_user: postgres
-  postgresql_privs:
-    db: "{{ db_name }}"
-    roles: "{{ db_user }}"
-    objs: ALL_IN_SCHEMA
-    type: table
-    privs: SELECT,INSERT,UPDATE,DELETE
-
-- name: Ensure default privileges for new tables
-  become_user: postgres
-  postgresql_query:
-    db: "{{ db_name }}"
-    query: |
-      ALTER DEFAULT PRIVILEGES IN SCHEMA public
-      GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO {{ db_user }};

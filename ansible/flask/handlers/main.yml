@@ -1,2 +1,8 @@
 ---
 # handlers file for flask
+- name: Restart Flask
+  systemd:
+    name: flask
+    state: restarted
+    enabled: yes
+    daemon_reload: yes

@@ -1,11 +1,8 @@
 ---
 # tasks file for nodejs
-
-- name: Install Node.js and npm
+- name: Install Node.js
   yum:
-    name:
-      - nodejs
-      - npm
+    name: nodejs
     state: present
 
 - name: Copy Node.js app
@@ -17,34 +14,13 @@
     mode: 0755
 
 - name: Install Node.js dependencies
-  npm:
-    path: /home/ec2-user/node-app
-    state: present
+  command: npm install
+  args:
+    chdir: /home/ec2-user/node-app
 
-- name: Deploy Node.js systemd service (inline)
-  copy:
-    dest: /etc/systemd/system/nodeapp.service
-    content: |
-      [Unit]
-      Description=Node.js App
-      After=network.target
+- name: Deploy systemd service for Node.js
+  template:
+    src: node.service.j2
+    dest: /etc/systemd/system/node.service
+  notify: Restart Node.js
 
-      [Service]
-      User=ec2-user
-      WorkingDirectory=/home/ec2-user/node-app
-      ExecStart=/usr/bin/node index.js
-      Environment=DB_HOST={{ db_host }}
-      Environment=DB_NAME={{ db_name }}
-      Environment=DB_USER={{ db_user }}
-      Environment=DB_PASS={{ db_password }}
-      Restart=always
-
-      [Install]
-      WantedBy=multi-user.target
-
-- name: Reload systemd and start Node.js
-  systemd:
-    name: nodeapp
-    state: restarted
-    daemon_reload: yes
-    enabled: yes
