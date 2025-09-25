@@ -1,6 +1,6 @@
 ---
 # tasks file for postgres
-# Install PostgreSQL packages
+
 - name: Install PostgreSQL packages
   yum:
     name:
@@ -10,20 +10,17 @@
       - python3-psycopg2
     state: present
 
-# Initialize database if needed
 - name: Initialize PostgreSQL database
   command: /usr/bin/postgresql-setup initdb
   args:
     creates: /var/lib/pgsql/data/PG_VERSION
 
-# Ensure PostgreSQL is running
 - name: Ensure PostgreSQL service is running
   service:
     name: postgresql
     state: started
     enabled: yes
 
-# Ensure DB user exists
 - name: Ensure devops user exists
   become_user: postgres
   postgresql_user:
@@ -31,7 +28,6 @@
     password: "{{ db_password }}"
     state: present
 
-# Ensure database exists
 - name: Ensure sharedappdb database exists
   become_user: postgres
   postgresql_db:
@@ -39,7 +35,22 @@
     owner: "{{ db_user }}"
     state: present
 
-# Ensure devs table exists
+- name: Allow password authentication for IPv4
+  lineinfile:
+    path: /var/lib/pgsql/data/pg_hba.conf
+    regexp: '^(host\s+all\s+all\s+127\.0\.0\.1/32\s+)\w+'
+    line: 'host    all             all             127.0.0.1/32            md5'
+    state: present
+  notify: Restart PostgreSQL
+
+- name: Allow password authentication for IPv6
+  lineinfile:
+    path: /var/lib/pgsql/data/pg_hba.conf
+    regexp: '^(host\s+all\s+all\s+::1/128\s+)\w+'
+    line: 'host    all             all             ::1/128                 md5'
+    state: present
+  notify: Restart PostgreSQL
+
 - name: Ensure devs table exists
   become_user: postgres
   postgresql_query:
@@ -47,27 +58,9 @@
     query: |
       CREATE TABLE IF NOT EXISTS devs (
         id SERIAL PRIMARY KEY,
-        name VARCHAR(50)
+        name VARCHAR(50) UNIQUE
       );
 
-# Ensure UNIQUE constraint on name column
-- name: Ensure name column has UNIQUE constraint
-  become_user: postgres
-  postgresql_query:
-    db: "{{ db_name }}"
-    query: |
-      DO $$
-      BEGIN
-        IF NOT EXISTS (
-          SELECT 1
-          FROM pg_constraint
-          WHERE conname = 'devs_name_unique'
-        ) THEN
-          ALTER TABLE devs ADD CONSTRAINT devs_name_unique UNIQUE (name);
-        END IF;
-      END$$;
-
-# Seed sample data idempotently
 - name: Seed devs table with sample data
   become_user: postgres
   postgresql_query:
@@ -79,3 +72,29 @@
         ('Node Developer'),
         ('Shared DB User')
       ON CONFLICT (name) DO NOTHING;
+
+- name: Grant privileges to devops user on schema
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ db_name }}"
+    roles: "{{ db_user }}"
+    objs: public
+    type: schema
+    privs: USAGE
+
+- name: Grant privileges on all tables to devops user
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ db_name }}"
+    roles: "{{ db_user }}"
+    objs: ALL_IN_SCHEMA
+    type: table
+    privs: SELECT,INSERT,UPDATE,DELETE
+
+- name: Ensure default privileges for new tables
+  become_user: postgres
+  postgresql_query:
+    db: "{{ db_name }}"
+    query: |
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public
+      GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO {{ db_user }};
