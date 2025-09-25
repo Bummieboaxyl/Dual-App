@@ -1,7 +1,5 @@
 ---
 # tasks file for flask
-# Install Flask app and configure service
-
 - name: Install Python3 and pip
   yum:
     name:
@@ -13,7 +11,7 @@
   pip:
     requirements: /home/ec2-user/flask-app/requirements.txt
 
-- name: Copy Flask app to target
+- name: Copy Flask app
   copy:
     src: ../../flask-app/
     dest: /home/ec2-user/flask-app/
@@ -21,7 +19,7 @@
     group: ec2-user
     mode: 0755
 
-- name: Create systemd service for Flask
+- name: Deploy Flask systemd service (inline)
   copy:
     dest: /etc/systemd/system/flaskapp.service
     content: |
@@ -33,24 +31,18 @@
       User=ec2-user
       WorkingDirectory=/home/ec2-user/flask-app
       ExecStart=/usr/bin/python3 app.py
-      Environment="DB_HOST={{ db_host }}"
-      Environment="DB_NAME={{ db_name }}"
-      Environment="DB_USER={{ db_user }}"
-      Environment="DB_PASS={{ db_password }}"
+      Environment=DB_HOST={{ db_host }}
+      Environment=DB_NAME={{ db_name }}
+      Environment=DB_USER={{ db_user }}
+      Environment=DB_PASS={{ db_password }}
       Restart=always
 
       [Install]
       WantedBy=multi-user.target
-  notify: Restart Flask
 
-- name: Enable Flask app service
-  systemd:
-    name: flaskapp
-    enabled: yes
-
-# Handlers
-- name: Restart Flask
+- name: Reload systemd and start Flask
   systemd:
     name: flaskapp
     state: restarted
     daemon_reload: yes
+    enabled: yes

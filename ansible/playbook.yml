@@ -1,7 +1,12 @@
 ---
-- name: Deploy Flask + Node.js apps with PostgreSQL
-  hosts: target
+- hosts: target
   become: yes
+  vars_files:
+    - vault.yml
+  vars:
+    db_host: localhost
+    db_name: sharedappdb
+    db_user: devops
   roles:
     - postgres
     - flask

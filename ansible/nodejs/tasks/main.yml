@@ -1,6 +1,5 @@
 ---
 # tasks file for nodejs
-# Install Node.js app and configure service
 
 - name: Install Node.js and npm
   yum:
@@ -9,7 +8,7 @@
       - npm
     state: present
 
-- name: Copy Node.js app to target
+- name: Copy Node.js app
   copy:
     src: ../../node-app/
     dest: /home/ec2-user/node-app/
@@ -22,7 +21,7 @@
     path: /home/ec2-user/node-app
     state: present
 
-- name: Create systemd service for Node.js
+- name: Deploy Node.js systemd service (inline)
   copy:
     dest: /etc/systemd/system/nodeapp.service
     content: |
@@ -34,33 +33,18 @@
       User=ec2-user
       WorkingDirectory=/home/ec2-user/node-app
       ExecStart=/usr/bin/node index.js
-      Environment="DB_HOST={{ db_host }}"
-      Environment="DB_NAME={{ db_name }}"
-      Environment="DB_USER={{ db_user }}"
-      Environment="DB_PASS={{ db_password }}"
+      Environment=DB_HOST={{ db_host }}
+      Environment=DB_NAME={{ db_name }}
+      Environment=DB_USER={{ db_user }}
+      Environment=DB_PASS={{ db_password }}
       Restart=always
 
       [Install]
       WantedBy=multi-user.target
-  notify: Restart Node
 
-- name: Enable Node.js app service
-  systemd:
-    name: nodeapp
-    enabled: yes
-
-# Handlers
-- name: Restart Node
+- name: Reload systemd and start Node.js
   systemd:
     name: nodeapp
     state: restarted
     daemon_reload: yes
-
-
-- name: Start Node app with PM2
-  command: pm2 start ecosystem.config.js
-  args:
-    chdir: /opt/node-app
-
-- name: Save PM2 process list
-  command: pm2 save
+    enabled: yes
