@@ -1,56 +1,59 @@
 ---
 # tasks file for postgres
-- name: Install PostgreSQL and dependencies
+# Install PostgreSQL and set up DB schema + seed data
+
+- name: Install PostgreSQL packages
   yum:
     name:
       - postgresql-server
       - postgresql-contrib
+      - postgresql-devel
       - python3-psycopg2
     state: present
 
-- name: Initialize PostgreSQL database (if not already initialized)
-  command: postgresql-setup --initdb
+- name: Initialize PostgreSQL database
+  command: /usr/bin/postgresql-setup initdb
   args:
-    creates: /var/lib/pgsql/data/postgresql.conf
+    creates: /var/lib/pgsql/data/PG_VERSION
 
-- name: Ensure PostgreSQL service is started and enabled
+- name: Ensure PostgreSQL is running and enabled
   service:
     name: postgresql
     state: started
     enabled: yes
 
-- name: Ensure sharedappdb database exists
-  become_user: postgres
-  community.postgresql.postgresql_db:
-    name: sharedappdb
-    state: present
-
 - name: Ensure devops user exists
-  community.postgresql.postgresql_user:
-    name: devops
-    password: "{{ db_password }}"
-    role_attr_flags: LOGIN
-
-- name: Ensure devops user has correct password
-  community.postgresql.postgresql_user:
+  become_user: postgres
+  postgresql_user:
     name: "{{ db_user }}"
     password: "{{ db_password }}"
-    role_attr_flags: LOGIN
     state: present
 
-- name: Copy schema file to server
-  copy:
-    src: db/init.sql
-    dest: /tmp/init.sql
-    mode: '0644'
-
-- name: Apply schema (only once)
+- name: Ensure sharedappdb database exists
   become_user: postgres
-  command: psql -d sharedappdb -f /tmp/init.sql
-  args:
-    creates: /tmp/schema_done.marker
+  postgresql_db:
+    name: "{{ db_name }}"
+    owner: "{{ db_user }}"
+    state: present
 
-- name: Mark schema as applied
-  file:
-    path: /tmp/schema_done.marker
-    state: touch
+- name: Ensure devs table exists
+  become_user: postgres
+  postgresql_query:
+    db: "{{ db_name }}"
+    query: |
+      CREATE TABLE IF NOT EXISTS devs (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(50) UNIQUE
+      );
+
+- name: Seed devs table with sample data
+  become_user: postgres
+  postgresql_query:
+    db: "{{ db_name }}"
+    query: |
+      INSERT INTO devs (name)
+      VALUES 
+        ('Flask Developer'),
+        ('Node Developer'),
+        ('Shared DB User')
+      ON CONFLICT (name) DO NOTHING;

@@ -1,5 +1,7 @@
 ---
 # tasks file for flask
+# Install Flask app and configure service
+
 - name: Install Python3 and pip
   yum:
     name:
@@ -7,47 +9,48 @@
       - python3-pip
     state: present
 
-- name: Install Flask + psycopg2
+- name: Install Python dependencies
   pip:
-    name:
-      - flask
-      - psycopg2-binary
-    executable: pip3
+    requirements: /home/ec2-user/flask-app/requirements.txt
 
-- name: Create flask app directory
-  file:
-    path: /opt/flask-app
-    state: directory
+- name: Copy Flask app to target
+  copy:
+    src: ../../flask-app/
+    dest: /home/ec2-user/flask-app/
     owner: ec2-user
     group: ec2-user
     mode: 0755
 
-- name: Copy Flask source code
-  copy:
-    src: ../../flask-app/
-    dest: /opt/flask-app/
-    owner: ec2-user
-    group: ec2-user
-
 - name: Create systemd service for Flask
   copy:
-    dest: /etc/systemd/system/flask-app.service
+    dest: /etc/systemd/system/flaskapp.service
     content: |
       [Unit]
-      Description=Flask Application
+      Description=Flask App
       After=network.target
 
       [Service]
       User=ec2-user
-      WorkingDirectory=/opt/flask-app
-      Environment=DB_HOST={{ db_host }}
-      Environment=DB_NAME={{ db_name }}
-      Environment=DB_USER={{ db_user }}
-      Environment=DB_PASS={{ db_pass }}
-      Environment=DB_PORT={{ db_port }}
-      ExecStart=/usr/bin/python3 /opt/flask-app/app.py
+      WorkingDirectory=/home/ec2-user/flask-app
+      ExecStart=/usr/bin/python3 app.py
+      Environment="DB_HOST={{ db_host }}"
+      Environment="DB_NAME={{ db_name }}"
+      Environment="DB_USER={{ db_user }}"
+      Environment="DB_PASS={{ db_password }}"
       Restart=always
 
       [Install]
       WantedBy=multi-user.target
   notify: Restart Flask
+
+- name: Enable Flask app service
+  systemd:
+    name: flaskapp
+    enabled: yes
+
+# Handlers
+- name: Restart Flask
+  systemd:
+    name: flaskapp
+    state: restarted
+    daemon_reload: yes
