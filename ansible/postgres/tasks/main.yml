@@ -1,7 +1,6 @@
 ---
 # tasks file for postgres
-# Install PostgreSQL and set up DB schema + seed data
-
+# Install PostgreSQL packages
 - name: Install PostgreSQL packages
   yum:
     name:
@@ -11,17 +10,20 @@
       - python3-psycopg2
     state: present
 
+# Initialize database if needed
 - name: Initialize PostgreSQL database
   command: /usr/bin/postgresql-setup initdb
   args:
     creates: /var/lib/pgsql/data/PG_VERSION
 
-- name: Ensure PostgreSQL is running and enabled
+# Ensure PostgreSQL is running
+- name: Ensure PostgreSQL service is running
   service:
     name: postgresql
     state: started
     enabled: yes
 
+# Ensure DB user exists
 - name: Ensure devops user exists
   become_user: postgres
   postgresql_user:
@@ -29,6 +31,7 @@
     password: "{{ db_password }}"
     state: present
 
+# Ensure database exists
 - name: Ensure sharedappdb database exists
   become_user: postgres
   postgresql_db:
@@ -36,6 +39,7 @@
     owner: "{{ db_user }}"
     state: present
 
+# Ensure devs table exists
 - name: Ensure devs table exists
   become_user: postgres
   postgresql_query:
@@ -43,9 +47,27 @@
     query: |
       CREATE TABLE IF NOT EXISTS devs (
         id SERIAL PRIMARY KEY,
-        name VARCHAR(50) UNIQUE
+        name VARCHAR(50)
       );
 
+# Ensure UNIQUE constraint on name column
+- name: Ensure name column has UNIQUE constraint
+  become_user: postgres
+  postgresql_query:
+    db: "{{ db_name }}"
+    query: |
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1
+          FROM pg_constraint
+          WHERE conname = 'devs_name_unique'
+        ) THEN
+          ALTER TABLE devs ADD CONSTRAINT devs_name_unique UNIQUE (name);
+        END IF;
+      END$$;
+
+# Seed sample data idempotently
 - name: Seed devs table with sample data
   become_user: postgres
   postgresql_query:
