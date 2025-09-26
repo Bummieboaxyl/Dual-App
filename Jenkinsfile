@@ -17,7 +17,7 @@ pipeline {
                 withCredentials([string(credentialsId: 'VAULT_PASS_ID', variable: 'VAULT_PASS')]) {
                    writeFile file: 'vault_pass.txt', text: VAULT_PASS
                    sh '''
-                      ansible-playbook -i ansible/inventory ansible/playbook.yml --vault-password-file ansible/vault_pass.txt
+                      ansible-playbook -i ansible/inventory ansible/playbook.yml --vault-password-file vault_pass.txt
                    '''
                 }
             }
