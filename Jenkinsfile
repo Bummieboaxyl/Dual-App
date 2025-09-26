@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'node1' }   // Runs on your Jenkins node worker
+    agent { label 'node' }   // Runs on your Jenkins node worker
     environment {
         ANSIBLE_HOST_KEY_CHECKING = 'False'
     }
@@ -38,7 +38,7 @@ pipeline {
             steps {
                 // Deletes artifacts older than 7 days from Jenkins workspace
                 sh '''
-                   ("""find artifacts/ -type f -mtime +7 -exec rm -f {} \;""")
+                   'find artifacts/ -type f -mtime +7 -exec rm -f {} \\;'
                 '''
                 cleanWs(cleanWhenAborted: true, 
                         deleteDirs: true, 
