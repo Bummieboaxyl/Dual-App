@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'node' }   // Runs on your Jenkins node worker
+    agent { label 'node1' }   // Runs on your Jenkins node worker
     environment {
         ANSIBLE_HOST_KEY_CHECKING = 'False'
     }
