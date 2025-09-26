@@ -1,26 +1,54 @@
 ---
 # tasks file for nodejs
-- name: Install Node.js
+- name: Ensure Node.js is installed
   yum:
-    name: nodejs
+    name:
+      - nodejs
+      - npm
     state: present
 
-- name: Copy Node.js app
+- name: Create node app dir
+  file:
+    path: /home/ec2-user/node-app
+    state: directory
+    owner: ec2-user
+    group: ec2-user
+    mode: '0755'
+
+- name: Deploy Node app from artifact if provided
+  when: node_artifact is defined and node_artifact != ""
+  unarchive:
+    src: "{{ node_artifact }}"
+    dest: /home/ec2-user/node-app
+    remote_src: no
+    owner: ec2-user
+    group: ec2-user
+
+- name: Copy Node app files from repo (fallback)
+  when: node_artifact is not defined or node_artifact == ""
   copy:
-    src: ../../node-app/
+    src: "{{ playbook_dir }}/../node-app/"
     dest: /home/ec2-user/node-app/
     owner: ec2-user
     group: ec2-user
-    mode: 0755
+    mode: '0755'
 
-- name: Install Node.js dependencies
-  command: npm install
+- name: Install Node dependencies
+  command: npm install --no-audit --no-fund
   args:
     chdir: /home/ec2-user/node-app
 
-- name: Deploy systemd service for Node.js
+- name: Deploy Node systemd service
   template:
     src: node.service.j2
     dest: /etc/systemd/system/node.service
-  notify: Restart Node.js
+  notify:
+    - Reload systemd
+    - Restart Node
+
+- name: Ensure node service is enabled
+  systemd:
+    name: node
+    enabled: yes
+
 

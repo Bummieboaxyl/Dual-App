@@ -2,6 +2,7 @@
 [Unit]
 Description=Node.js App
 After=network.target postgresql.service
+Requires=postgresql.service
 
 [Service]
 User=ec2-user
@@ -15,3 +16,4 @@ Restart=always
 
 [Install]
 WantedBy=multi-user.target
+

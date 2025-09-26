@@ -1,28 +1,61 @@
 ---
 # tasks file for flask
-- name: Install Python and pip
+- name: Ensure Python3 & pip are installed
   yum:
     name:
       - python3
       - python3-pip
     state: present
 
-- name: Install Flask and psycopg2
-  pip:
-    name:
-      - flask
-      - psycopg2-binary
+- name: Create flask app dir
+  file:
+    path: /home/ec2-user/flask-app
+    state: directory
+    owner: ec2-user
+    group: ec2-user
+    mode: '0755'
 
-- name: Copy Flask app
+- name: Deploy Flask from artifact if provided
+  when: flask_artifact is defined and flask_artifact != ""
+  unarchive:
+    src: "{{ flask_artifact }}"
+    dest: /home/ec2-user/flask-app
+    remote_src: no
+    owner: ec2-user
+    group: ec2-user
+
+- name: Copy Flask app files from repo (fallback)
+  when: flask_artifact is not defined or flask_artifact == ""
   copy:
-    src: ../../flask-app/
+    src: "{{ playbook_dir }}/../flask-app/"
     dest: /home/ec2-user/flask-app/
     owner: ec2-user
     group: ec2-user
-    mode: 0755
+    mode: '0755'
 
-- name: Deploy systemd service for Flask
+- name: Install Python requirements (if requirements.txt exists)
+  pip:
+    requirements: /home/ec2-user/flask-app/requirements.txt
+    executable: pip3
+  when: >
+    (flask_artifact is defined and flask_artifact != "") or
+    (flask_artifact is not defined and lookup('file', playbook_dir + '/../flask-app/requirements.txt', errors='ignore') is not none)
+
+- name: Install Gunicorn
+  pip:
+    name: gunicorn
+    executable: pip3
+
+- name: Deploy Gunicorn systemd service (runs wsgi:app)
   template:
     src: flask.service.j2
     dest: /etc/systemd/system/flask.service
-  notify: Restart Flask
+  notify:
+    - Reload systemd
+    - Restart Flask
+
+- name: Ensure flask service is enabled
+  systemd:
+    name: flask
+    enabled: yes
+

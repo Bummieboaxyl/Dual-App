@@ -1,4 +1,13 @@
 # TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+# allow local postgres unix-socket connections via peer (so ansible become_user=postgres works)
 local   all             postgres                                peer
+
+# local socket auth for all other users: md5 (password)
+local   all             all                                     md5
+
+# IPv4 local connections:
 host    all             all             127.0.0.1/32            md5
+
+# IPv6 local connections:
 host    all             all             ::1/128                 md5

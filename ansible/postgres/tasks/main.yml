@@ -10,18 +10,20 @@
       - python3-psycopg2
     state: present
 
-- name: Initialize PostgreSQL database if not already
+- name: Initialize PostgreSQL database (if not already)
   command: /usr/bin/postgresql-setup initdb
   args:
     creates: /var/lib/pgsql/data/PG_VERSION
+  register: initdb_result
+  changed_when: initdb_result.rc == 0
 
-- name: Deploy pg_hba.conf with md5 auth
+- name: Deploy pg_hba.conf (allow local postgres user via peer, apps via md5)
   template:
     src: pg_hba.conf.j2
     dest: /var/lib/pgsql/data/pg_hba.conf
     owner: postgres
     group: postgres
-    mode: 0600
+    mode: '0600'
   notify: Restart PostgreSQL
 
 - name: Ensure PostgreSQL is running
@@ -30,13 +32,15 @@
     state: started
     enabled: yes
 
-- name: Ensure DB user exists
+# Ensure DB user exists and has password (from vault)
+- name: Ensure app DB user exists
   become_user: postgres
   postgresql_user:
     name: "{{ db_user }}"
     password: "{{ db_password }}"
     state: present
 
+# Ensure DB exists
 - name: Ensure database exists
   become_user: postgres
   postgresql_db:
@@ -44,6 +48,7 @@
     owner: "{{ db_user }}"
     state: present
 
+# Ensure devs table exists (idempotent)
 - name: Ensure devs table exists
   become_user: postgres
   postgresql_query:
@@ -51,22 +56,43 @@
     query: |
       CREATE TABLE IF NOT EXISTS devs (
         id SERIAL PRIMARY KEY,
-        name VARCHAR(50) UNIQUE
+        name VARCHAR(50)
       );
 
-- name: Grant privileges to app user
+# Ensure unique constraint on name (safe if already present)
+- name: Ensure UNIQUE constraint on devs.name
   become_user: postgres
   postgresql_query:
     db: "{{ db_name }}"
-    query: "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {{ db_user }};"
+    query: |
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname='devs_name_unique'
+        ) THEN
+          ALTER TABLE devs ADD CONSTRAINT devs_name_unique UNIQUE (name);
+        END IF;
+      END$$;
 
+# Grant privileges
+- name: Grant privileges to app user on DB and schema
+  become_user: postgres
+  postgresql_query:
+    db: "{{ db_name }}"
+    query: |
+      GRANT CONNECT ON DATABASE {{ db_name }} TO {{ db_user }};
+      GRANT USAGE ON SCHEMA public TO {{ db_user }};
+      GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO {{ db_user }};
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO {{ db_user }};
+
+# Seed sample data idempotently
 - name: Seed devs table with sample data
   become_user: postgres
   postgresql_query:
     db: "{{ db_name }}"
     query: |
       INSERT INTO devs (name)
-      VALUES 
+      VALUES
         ('Flask Developer'),
         ('Node Developer'),
         ('Shared DB User')

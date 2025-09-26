@@ -1,12 +1,13 @@
 
 [Unit]
-Description=Flask App
+Description=Flask App (Gunicorn)
 After=network.target postgresql.service
+Requires=postgresql.service
 
 [Service]
 User=ec2-user
 WorkingDirectory=/home/ec2-user/flask-app
-ExecStart=/usr/bin/python3 /home/ec2-user/flask-app/app.py
+ExecStart=/usr/bin/python3 -m gunicorn --workers 3 --bind 127.0.0.1:5000 wsgi:app
 Environment="DB_HOST=localhost"
 Environment="DB_NAME={{ db_name }}"
 Environment="DB_USER={{ db_user }}"
@@ -15,4 +16,5 @@ Restart=always
 
 [Install]
 WantedBy=multi-user.target
+
 

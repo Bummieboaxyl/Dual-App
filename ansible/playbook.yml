@@ -1,5 +1,5 @@
 ---
-- name: Deploy Dual App with Shared DB
+- name: Deploy Dual-App stack (Postgres + Flask + Node)
   hosts: app
   become: yes
   vars_files:
@@ -9,3 +9,4 @@
     - postgres
     - flask
     - nodejs
+

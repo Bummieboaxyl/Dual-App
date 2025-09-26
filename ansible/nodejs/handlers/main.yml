@@ -1,8 +1,10 @@
 ---
-# handlers file for nodejs
-- name: Restart Node.js
+- name: Reload systemd
+  command: systemctl daemon-reload
+
+- name: Restart Node
   systemd:
     name: node
     state: restarted
     enabled: yes
-    daemon_reload: yes
+
