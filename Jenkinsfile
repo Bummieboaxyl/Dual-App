@@ -24,6 +24,7 @@ pipeline {
                   --vault-password-file vault_pass.txt \
                   --private-key $SSH_KEY \
                   -u $SSH_USER
+                  -e "ansible_ssh_private_key_file=$SSH_KEY ansible_user=$SSH_USER"
             '''
         }
     }
