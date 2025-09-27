@@ -14,7 +14,7 @@ app.get('/', async (req, res) => {
   try {
     const result = await pool.query('SELECT name FROM devs');
     const names = result.rows.map(row => `<li>${row.name}</li>`).join('');
-    res.send(`<h1>Team 6 Node.js app with shared DB is up and running!</h1><ul>${names}</ul>`);
+    res.send(`<h2>Team 6 Node.js app with shared DB is up and running!</h2><ul>${names}</ul>`);
   } catch (err) {
     console.error(err);
     res.status(500).send("Database connection error");
