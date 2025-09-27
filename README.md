@@ -56,7 +56,7 @@ DUAL-APP/
 * **Node.js** (JavaScript runtime)
 * **Postgres** (Relational database)
 * **Ansible** (Infrastructure automation)
-* **Jenkins** (CI/CD pipeline)
+* **Jenkins** (CI/CD pipelines)
 * **Gunicorn** (WSGI server for Flask)
 * **Git/GitHub** (Version control)
 
