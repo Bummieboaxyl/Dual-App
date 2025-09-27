@@ -24,7 +24,7 @@ pipeline {
                   --vault-password-file vault_pass.txt \
                   --private-key $SSH_KEY \
                   -u $SSH_USER
-            """
+            '''
         }
     }
 }
