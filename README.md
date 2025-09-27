@@ -110,6 +110,6 @@ DUAL-APP/
 
 #### 👨‍💻 Author
 
-This project was designed and implemented as a demonstration of **end-to-end DevOps automation** using a Dual-app stack with shared resources.
+This project was designed and implemented as a demonstration of **end-to-end DevOps automation** using a dual-app stack with shared resources.
 
 
