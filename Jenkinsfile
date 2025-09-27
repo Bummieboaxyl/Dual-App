@@ -14,31 +14,20 @@ pipeline {
             }
         }
 
-        stage('Deploy with Ansible') {
-            steps {
-                withCredentials([
-                    sshUserPrivateKey(
-                        credentialsId: 'ansible-ssh-key',
-                        keyFileVariable: 'SSH_KEY',
-                        usernameVariable: 'SSH_USER'
-                    ),
-                    string(
-                        credentialsId: 'VAULT_PASS_ID',
-                        variable: 'VAULT_PASS'
-                    )
-                ]) {
-                    // Save vault password to a file
-                    writeFile file: 'vault_pass.txt', text: VAULT_PASS
-
-                    // Run Ansible with injected SSH key + vault pass
-                    sh """
-                        ansible-playbook -i ansible/inventory ansible/playbook.yml \
-                          --vault-password-file vault_pass.txt \
-                          --private-key $SSH_KEY \
-                          -u $SSH_USER \
-                          -e ansible_ssh_private_key_file=$SSH_KEY \
-                          -e ansible_user=$SSH_USER
-                    """
+    stage('Deploy with Ansible') {
+        steps {
+        withCredentials([
+            string(credentialsId: 'VAULT_PASS_ID', variable: 'VAULT_PASS'),
+            sshUserPrivateKey(credentialsId: 'ansible-ssh-key', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')
+        ]) {
+            writeFile file: 'vault_pass.txt', text: VAULT_PASS
+            sh '''
+                ansible-playbook -i ansible/inventory ansible/playbook.yml \
+                  --vault-password-file vault_pass.txt \
+                  --private-key $SSH_KEY \
+                  -u $SSH_USER
+                  -e "ansible_ssh_private_key_file=$SSH_KEY ansible_user=$SSH_USER"
+            '''
                 }
             }
         }
